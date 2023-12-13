@@ -6,8 +6,11 @@ import Dropzone from "react-dropzone";
 import { Cloud, File, Loader2 } from "lucide-react";
 import { OurFileRouter } from "@/app/api/uploadthing/core";
 import { generateReactHelpers } from "@uploadthing/react/hooks";
-import { TableCaption, TableRow, TableBody, TableCell } from "./ui/table";
 import { Progress } from "./Progress";
+import DataTable from "./DataTable";
+import CalendlyEmbed from "./CalendlyEmbed";
+
+const calendlyCode = process.env.NEXT_PUBLIC_CALENDLY;
 
 const { useUploadThing } = generateReactHelpers<OurFileRouter>();
 
@@ -15,12 +18,12 @@ const UploadDropzone = () => {
 	const [isUploading, setIsUploading] = useState<boolean>(false);
 	const [uploadProgress, setUploadProgress] = useState<number>(0);
 	const [Data, setData] = useState<Object>();
+	const [appointment, setAppointment] = useState(false);
 	// const [Summary, setSummary] = useState();
 
 	const { startUpload } = useUploadThing("imageUploader", {
 		onClientUploadComplete: async (file) => {
 			setUploadProgress(50);
-			console.log("uploaded");
 			const data = file[0].serverData;
 			try {
 				const res = await fetch(
@@ -34,7 +37,10 @@ const UploadDropzone = () => {
 					}
 				);
 				setUploadProgress(70);
-				setData(await res.json());
+
+				setTimeout(async () => {
+					setData(await res.json());
+				}, 10000);
 
 				// const sum = getSummary(Data);
 				// console.log(await sum);
@@ -42,9 +48,9 @@ const UploadDropzone = () => {
 				window.alert(`An error occured, please try again ${error}`);
 			}
 		},
-		onUploadError: () => {
+		onUploadError: (error) => {
 			setIsUploading(false);
-			window.alert("An error occured, please try again");
+			window.alert(error);
 		},
 		onUploadBegin: () => {
 			setUploadProgress(10);
@@ -53,7 +59,7 @@ const UploadDropzone = () => {
 
 	return (
 		<>
-			{!Data ? (
+			{!Data && !appointment ? (
 				<>
 					<p className="pt-3 text-center font-bold">
 						Get AI Skin Evaluation
@@ -136,56 +142,23 @@ const UploadDropzone = () => {
 						)}
 					</Dropzone>
 				</>
-			) : (
+			) : Data && !appointment ? (
 				<>
-					<TableCaption className=" text-lg font-bold text-black">
-						Your Skin Evaluation
-					</TableCaption>
-					<p className=" text-center">
-						According to our AI Evaluation, The chances of you
-						having these issues are:
-					</p>
-					<TableBody>
-						{Object.values(Data).map((item) => {
-							console.log(Data);
-
-							return (
-								<TableRow key={item.label}>
-									<TableCell className="font-medium">
-										{item.label}
-									</TableCell>
-									<TableCell className="  w-full">
-										<Progress
-											value={item.score * 100}
-											indicatorColor="bg-blue-700"
-											className="h-1 w-full bg-zinc-200 "
-										/>
-									</TableCell>
-									<TableCell className=" w-6 text-right">
-										{(parseFloat(item.score) * 100).toFixed(
-											2
-										)}
-										%
-									</TableCell>
-								</TableRow>
-							);
-						})}
-					</TableBody>
-
-					<p className="mt-3">
-						<em>
-							<strong className=" text-red-800">
-								DISCLAIMER:
-							</strong>
-							This is just an estimate to give you an idea of your
-							current skin health. The doctor will properly
-							evaluate you during the appointment, but this can
-							give you a indication of what issue might be
-							prevalant.
-						</em>
-					</p>
-					<Button className="mt-3">Book Appointment</Button>
+					<DataTable Data={Data} />
+					<Button
+						className="mt-3"
+						onClick={() => setAppointment(true)}
+					>
+						Book Appointment
+					</Button>
 				</>
+			) : (
+				<div className="container h-[500px]">
+					<h1 className=" font-bold text-center">
+						Schedule an Appointment
+					</h1>
+					<CalendlyEmbed url={calendlyCode} />
+				</div>
 			)}
 		</>
 	);
