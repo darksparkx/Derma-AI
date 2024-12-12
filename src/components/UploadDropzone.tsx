@@ -24,19 +24,38 @@ export const UploadDropzone = () => {
 	const { startUpload } = useUploadThing("imageUploader", {
 		onClientUploadComplete: async (file) => {
 			setUploadProgress(50);
-			const data = file[0].serverData;
+			const imageUrl = file[0].serverData;
+			console.log(imageUrl);
+
 			try {
+				// Fetch the image as binary data
+				const imageRes = await fetch(imageUrl);
+				if (!imageRes.ok) {
+					throw new Error(
+						`Failed to fetch image from URL: ${imageRes.statusText}`
+					);
+				}
+				const imageBlob = await imageRes.blob();
+				const imageArrayBuffer = await imageBlob.arrayBuffer();
+
+				// Create a FormData object to send the image as multipart/form-data
+				const formData = new FormData();
+				formData.append("file", imageBlob, "uploaded_image.jpg");
+
 				const res = await fetch(
-					"https://api-inference.huggingface.co/models/varun1505/face-characteristics",
+					"https://ng8ha73oc06s55ab.us-east-1.aws.endpoints.huggingface.cloud",
 					{
 						headers: {
-							Authorization: `Bearer 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`,
+							Accept: "application/json",
+							"Content-Type": imageBlob.type, // Set the correct MIME type (e.g., image/jpeg)
 						},
 						method: "POST",
-						body: data,
+						body: imageArrayBuffer,
 					}
 				);
 				setUploadProgress(70);
+				// console.log(await res.json());
+				// console.log(await res);
 
 				setTimeout(async () => {
 					const results = await res.json();
@@ -45,15 +64,13 @@ export const UploadDropzone = () => {
 					const sum = getSummary(results);
 					setSummary(await sum);
 				}, 10000);
-
-				// console.log(await sum);
 			} catch (error) {
 				window.alert(`An error occured, please try again ${error}`);
 			}
 		},
 		onUploadError: (error) => {
 			setIsUploading(false);
-			window.alert(error);
+			window.alert(`An error occured, please try again ${error}`);
 		},
 		onUploadBegin: () => {
 			setUploadProgress(10);
